@@ -17,16 +17,20 @@
 
 #pragma once
 
+#include<memory>
+
 #include<cstdio>
 #include<string>
+#include"ne_utils.h"
 
 class MMapper;
+struct Error;
 
 class File final {
 private:
 
     FILE *f;
-    void read(void *buf, size_t bufsize);
+    void read(void *buf, size_t bufsize, Error **e);
 
 public:
 
@@ -36,8 +40,9 @@ public:
     File& operator=(File &&other) { f = other.f; other.f = nullptr; return *this; }
     ~File();
 
-    File(const std::string &fname, const char *mode);
-    File(FILE *opened);
+
+    void initialize(const std::string &fname, const char *mode, Error **e);
+    void initialize(FILE *opened, Error **e);
 
     operator FILE*() { return f; }
 
@@ -46,28 +51,28 @@ public:
     int seek(int64_t offset, int whence=SEEK_SET);
     int fileno() const;
 
-    MMapper mmap() const;
+    std::unique_ptr<MMapper> mmap(Error **e) const;
 
-    uint64_t size() const;
-    void flush();
+    uint64_t size(Error **e) const;
+    void flush(Error **e);
     void close();
 
-    uint8_t read8();
-    uint16_t read16le();
-    uint32_t read32le();
-    uint64_t read64le();
-    uint16_t read16be();
-    uint32_t read32be();
-    uint64_t read64be();
-    std::string read(size_t bufsize);
+    uint8_t read8(Error **e);
+    uint16_t read16le(Error **e);
+    uint32_t read32le(Error **e);
+    uint64_t read64le(Error **e);
+    uint16_t read16be(Error **e);
+    uint32_t read32be(Error **e);
+    uint64_t read64be(Error **e);
+    std::string read(size_t bufsize, Error **e);
 
-    void write8(uint8_t i);
-    void write16le(uint16_t i);
-    void write32le(uint32_t i);
-    void write64le(uint64_t i);
-    void write16be(uint16_t i);
-    void write32be(uint32_t i);
-    void write64be(uint64_t);
-    void write(const std::string &s);
-    void write(const unsigned char *s, uint64_t size);
+    void write8(uint8_t i, Error **e);
+    void write16le(uint16_t i, Error **e);
+    void write32le(uint32_t i, Error **e);
+    void write64le(uint64_t i, Error **e);
+    void write16be(uint16_t i, Error **e);
+    void write32be(uint32_t i, Error **e);
+    void write64be(uint64_t, Error **e);
+    void write(const std::string &s, Error **e);
+    void write(const unsigned char *s, uint64_t size, Error **e);
 };

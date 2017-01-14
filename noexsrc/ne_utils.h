@@ -23,7 +23,22 @@
 #include<cstdint>
 #include<cstdio>
 
-void throw_system(const char *msg);
+class File;
+
+
+/* Yes, this really should use std::variant<ResultType, Error>
+ * but it's so new that compilers don't support it yet.
+ */
+
+struct Error {
+    std::string msg;
+};
+
+Error* create_error(const char *msg);
+
+void free_error(Error *e);
+
+Error* create_system_error(const char *msg);
 
 uint32_t CRC32(const unsigned char *buf, uint64_t bufsize);
-uint32_t CRC32(File &f);
+uint32_t CRC32(File &f, Error **e);

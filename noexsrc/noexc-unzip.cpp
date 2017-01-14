@@ -24,20 +24,25 @@
 #endif
 
 #include"ne_zipfile.h"
+#include"ne_utils.h"
 
 int main(int argc, char **argv) {
     if(argc != 2 ) {
         printf("%s <zip file>\n", argv[0]);
         return 1;
     }
-    try {
-        ZipFile f(argv[1]);
-        f.unzip("");
-    } catch(std::exception &e) {
-        printf("Unzipping failed: %s\n", e.what());
+    Error *e = nullptr;
+    ZipFile f;
+    f.initialize(argv[1], &e);
+    if(e) {
+        printf("Opening file failed: %s\n", e->msg.c_str());
+        free_error(e);
         return 1;
-    } catch(...) {
-        printf("Unzipping failed due to an unknown reason.");
+    }
+    f.unzip("", &e);
+    if(e) {
+        printf("Unzipping failed: %s\n", e->msg.c_str());
+        free_error(e);
         return 1;
     }
     return 0;

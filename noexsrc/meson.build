@@ -13,7 +13,6 @@ zl = static_library('noexccore',
   'ne_utils.cpp',
   'ne_file.cpp',
   'ne_mmapper.cpp',
-  'ne_error.cpp',
   cpp_args : cpp_args,
   dependencies : compr_deps
 )

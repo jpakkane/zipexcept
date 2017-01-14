@@ -36,15 +36,22 @@ MMapper::MMapper(const File &f) {
 }
 
 #else
-MMapper::MMapper(const File &f) {
-    map_size = f.size();
+MMapper::MMapper() : addr(nullptr) {
+}
+
+void MMapper::initialise(const File &f, Error **e) {
+    map_size = f.size(e);
+    if(*e) {
+        return;
+    }
     auto fdnum = f.fileno();
     if(map_size == 0) {
         addr = nullptr;
     } else {
         addr = ::mmap(nullptr, map_size, PROT_READ, MAP_PRIVATE, fdnum, 0);
         if(addr == MAP_FAILED) {
-            throw_system("Could not mmap file:");
+            addr = nullptr;
+            *e = create_system_error("Could not mmap file:");
         }
     }
 }

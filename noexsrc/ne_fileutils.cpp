@@ -36,10 +36,10 @@
 
 namespace {
 
-std::vector<fileinfo> expand_entry(const std::string &fname);
+std::vector<fileinfo> expand_entry(const std::string &fname, Error **e);
 
 
-fileinfo get_unix_stats(const std::string &fname) {
+fileinfo get_unix_stats(const std::string &fname, Error **e) {
     struct stat buf;
     fileinfo sd;
 #ifdef _WIN32
@@ -47,7 +47,8 @@ fileinfo get_unix_stats(const std::string &fname) {
 #else
     if(lstat(fname.c_str(), &buf) != 0) {
 #endif
-        throw_system("Could not get entry stats: ");
+        *e = create_system_error("Could not get entry stats: ");
+        return sd;
     }
     sd.fname = fname;
     sd.ue.uid = buf.st_uid;
@@ -69,7 +70,7 @@ fileinfo get_unix_stats(const std::string &fname) {
 }
 
 #ifdef _WIN32
-std::vector<std::string> handle_dir_platform(const std::string &dirname) {
+std::vector<std::string> handle_dir_platform(const std::string &dirname, Error **e) {
     std::string glob = dirname + "\\*.*";
     std::vector<std::string> entries;
     HANDLE hFind;
@@ -77,7 +78,8 @@ std::vector<std::string> handle_dir_platform(const std::string &dirname) {
 
     hFind = FindFirstFile(glob.c_str(), &data);
     if (hFind == INVALID_HANDLE_VALUE) {
-        throw_system("Could not get directory contents: ");
+        *e = create_system_error("Could not get directory contents: ");
+        return entries;
     }
     if (hFind != INVALID_HANDLE_VALUE) {
         do {
@@ -113,7 +115,7 @@ std::vector<std::string> handle_dir_platform(const std::string &dirname) {
 }
 #endif
 
-std::vector<fileinfo> expand_dir(const std::string &dirname) {
+std::vector<fileinfo> expand_dir(const std::string &dirname, Error **e) {
     // Always set order to create reproducible zip files.
     std::vector<fileinfo> result;
     auto entries = handle_dir_platform(dirname);
@@ -121,17 +123,29 @@ std::vector<fileinfo> expand_dir(const std::string &dirname) {
     std::string fullpath;
     for(const auto &base : entries) {
         fullpath = dirname + '/' + base;
-        auto new_ones = expand_entry(fullpath);
+        auto new_ones = expand_entry(fullpath, e);
+        if(*e) {
+            std::vector<fileinfo> empty;
+            return empty;
+        }
         std::move(new_ones.begin(), new_ones.end(), std::back_inserter(result));
     }
     return result;
 }
 
-std::vector<fileinfo> expand_entry(const std::string &fname) {
-    auto fi = get_unix_stats(fname);
+std::vector<fileinfo> expand_entry(const std::string &fname, Error **e) {
+    auto fi = get_unix_stats(fname, e);
+    if(*e) {
+        std::vector<fileinfo> empty;
+        return empty;
+    }
     std::vector<fileinfo> result{fi};
     if(is_dir(fi)) {
-        auto new_ones = expand_dir(fname);
+        auto new_ones = expand_dir(fname, e);
+        if(*e) {
+            std::vector<fileinfo> empty;
+            return empty;
+        }
         std::move(new_ones.begin(), new_ones.end(), std::back_inserter(result));
         return result;
     } else {
@@ -175,7 +189,7 @@ bool exists_on_fs(const std::string &s) {
 }
 
 
-void mkdirp(const std::string &s) {
+void mkdirp(const std::string &s, Error **e) {
     if(is_dir(s)) {
         return;
     }
@@ -193,7 +207,8 @@ void mkdirp(const std::string &s) {
             mkdir(curdir.c_str(), S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
 #endif
             if(!is_dir(curdir)) {
-                throw_system("Could not create directory:");
+                *e = create_system_error("Could not create directory:");
+                return;
             }
         }
         offset = slash + 1;
@@ -203,12 +218,12 @@ void mkdirp(const std::string &s) {
 
 
 
-void create_dirs_for_file(const std::string &s) {
+void create_dirs_for_file(const std::string &s, Error **e) {
     auto lastslash = s.rfind('/');
     if(lastslash == std::string::npos || lastslash == 0) {
         return;
     }
-    mkdirp(s.substr(0, lastslash));
+    mkdirp(s.substr(0, lastslash), e);
 }
 
 bool is_absolute_path(const std::string &fname) {
@@ -223,9 +238,13 @@ bool is_absolute_path(const std::string &fname) {
 
 }
 
-std::vector<fileinfo> expand_files(const std::vector<std::string> &originals) {
-    return std::accumulate(originals.begin(), originals.end(), std::vector<fileinfo>{}, [](std::vector<fileinfo> res, const std::string &s) {
-        auto n = expand_entry(s);
+std::vector<fileinfo> expand_files(const std::vector<std::string> &originals, Error **e) {
+    return std::accumulate(originals.begin(), originals.end(), std::vector<fileinfo>{}, [&e](std::vector<fileinfo> res, const std::string &s) {
+        auto n = expand_entry(s, e);
+        if(*e) {
+            std::vector<fileinfo> empty;
+            return empty;
+        }
         std::move(n.begin(), n.end(), std::back_inserter(res));
         return res;
     });

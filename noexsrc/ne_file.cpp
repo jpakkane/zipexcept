@@ -21,24 +21,25 @@
 #include<ne_portable_endian.h>
 #include<sys/stat.h>
 
-File::File(const std::string &fname, const char *mode) {
-    f = fopen(fname.c_str(), mode);
-    if(!f) {
-        std::string msg("Could not open file ");
-        msg += fname;
-        msg += ":";
-        throw_system(msg.c_str());
-    }
-
-}
-
-File::File(FILE *opened) : f(opened) {
-}
 
 File::~File() {
     if(f) {
         fclose(f);
     }
+}
+
+void File::initialize(const std::string &fname, const char *mode, Error **e) {
+    if(f) {
+        fclose(f);
+    }
+    f = fopen(fname.c_str(), mode);
+    if(!f) {
+        std::string msg("Could not open file ");
+        msg += fname;
+        msg += ":";
+        *e = create_system_error(msg.c_str());
+    }
+
 }
 
 void File::close() {
@@ -67,127 +68,133 @@ int File::fileno() const {
     return ::fileno(f);
 }
 
-MMapper File::mmap() const {
-    return MMapper(*this);
+std::unique_ptr<MMapper> File::mmap(Error **e) const {
+    MMapper *m = new MMapper();
+    m->initialise(*this, e);
+    if(*e) {
+        delete m;
+        return nullptr;
+    }
+    return std::unique_ptr<MMapper>(m);
 }
 
-void File::read(void *buf, size_t bufsize) {
+void File::read(void *buf, size_t bufsize, Error **e) {
     if(fread(buf, 1, bufsize, f) != bufsize) {
-        throw_system("Could not read data:");
+        *e = create_system_error("Could not read data:");
     }
 }
 
-uint8_t File::read8() {
+uint8_t File::read8(Error **e) {
     uint8_t r;
-    read(&r, sizeof(r));
+    read(&r, sizeof(r), e);
     return r;
 }
 
-uint16_t File::read16le() {
+uint16_t File::read16le(Error **e) {
     uint16_t r;
-    read(&r, sizeof(r));
+    read(&r, sizeof(r), e);
     return le16toh(r);
 
 }
 
-uint32_t File::read32le() {
+uint32_t File::read32le(Error **e) {
     uint32_t r;
-    read(&r, sizeof(r));
+    read(&r, sizeof(r), e);
     return le32toh(r);
 }
 
-uint64_t File::read64le() {
+uint64_t File::read64le(Error **e) {
     uint64_t r;
-    read(&r, sizeof(r));
+    read(&r, sizeof(r), e);
     return le64toh(r);
 }
 
-uint16_t File::read16be() {
+uint16_t File::read16be(Error **e) {
     uint16_t r;
-    read(&r, sizeof(r));
+    read(&r, sizeof(r), e);
     return be16toh(r);
 
 }
 
-uint32_t File::read32be() {
+uint32_t File::read32be(Error **e) {
     uint32_t r;
-    read(&r, sizeof(r));
+    read(&r, sizeof(r), e);
     return be32toh(r);
 }
 
-uint64_t File::read64be() {
+uint64_t File::read64be(Error **e) {
     uint64_t r;
-    read(&r, sizeof(r));
+    read(&r, sizeof(r), e);
     return be64toh(r);
 }
 
-std::string File::read(size_t bufsize) {
+std::string File::read(size_t bufsize, Error **e) {
     std::string buf(bufsize, 'X');
-    read(&buf[0], bufsize);
+    read(&buf[0], bufsize, e);
     return buf;
 }
 
-uint64_t File::size() const {
+uint64_t File::size(Error **e) const {
     struct stat buf;
     if(fstat(fileno(), &buf) != 0) {
-        throw_system("Statting self failed:");
+        *e = create_system_error("Statting self failed:");
+        return -1;
     }
     return buf.st_size;
 }
 
-void File::flush() {
+void File::flush(Error **e) {
     if(fflush(f) != 0) {
-        throw_system("Flushing data failed:");
+        *e = create_system_error("Flushing data failed:");
     }
 }
 
-void File::write8(uint8_t i) {
-    write(reinterpret_cast<const unsigned char*>(&i), sizeof(i));
+void File::write8(uint8_t i, Error **e) {
+    write(reinterpret_cast<const unsigned char*>(&i), sizeof(i), e);
 }
 
-void File::write16le(uint16_t i) {
+void File::write16le(uint16_t i, Error **e) {
     uint16_t c = htole16(i);
-    write(reinterpret_cast<const unsigned char*>(&c), sizeof(c));
+    write(reinterpret_cast<const unsigned char*>(&c), sizeof(c), e);
 }
 
-void File::write32le(uint32_t i) {
+void File::write32le(uint32_t i, Error **e) {
     uint32_t c = htole32(i);
-    write(reinterpret_cast<const unsigned char*>(&c), sizeof(c));
+    write(reinterpret_cast<const unsigned char*>(&c), sizeof(c), e);
 
 }
 
-void File::write64le(uint64_t i) {
+void File::write64le(uint64_t i, Error **e) {
     uint64_t c = htole64(i);
-    write(reinterpret_cast<const unsigned char*>(&c), sizeof(c));
+    write(reinterpret_cast<const unsigned char*>(&c), sizeof(c), e);
 
 }
 
-void File::write16be(uint16_t i) {
+void File::write16be(uint16_t i, Error **e) {
     uint16_t c = htobe16(i);
-    write(reinterpret_cast<const unsigned char*>(&c), sizeof(c));
+    write(reinterpret_cast<const unsigned char*>(&c), sizeof(c), e);
 
 }
 
-void File::write32be(uint32_t i) {
+void File::write32be(uint32_t i, Error **e) {
     uint32_t c = htobe32(i);
-    write(reinterpret_cast<const unsigned char*>(&c), sizeof(c));
+    write(reinterpret_cast<const unsigned char*>(&c), sizeof(c), e);
 
 }
 
-void File::write64be(uint64_t i) {
+void File::write64be(uint64_t i, Error **e) {
     uint64_t c = htobe64(i);
-    write(reinterpret_cast<const unsigned char*>(&c), sizeof(c));
+    write(reinterpret_cast<const unsigned char*>(&c), sizeof(c), e);
 
 }
 
-void File::write(const std::string &s) {
-    this->write(reinterpret_cast<const unsigned char*>(s.data()), s.size());
+void File::write(const std::string &s, Error **e) {
+    this->write(reinterpret_cast<const unsigned char*>(s.data()), s.size(), e);
 }
 
-void File::write(const unsigned char *s, uint64_t size) {
+void File::write(const unsigned char *s, uint64_t size, Error **e) {
     if(fwrite(s, 1, size, f) != size) {
-        throw_system("Could not write data:");
+        *e = create_system_error("Could not write data:");
     }
-
 }
 

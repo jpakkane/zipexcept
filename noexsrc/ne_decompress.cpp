@@ -58,9 +58,9 @@
 
 namespace {
 
-uint32_t inflate_to_file(const unsigned char *data_start, uint64_t data_size, FILE *ofile);
-uint32_t lzma_to_file(const unsigned char *data_start, uint64_t data_size, FILE *ofile);
-uint32_t unstore_to_file(const unsigned char *data_start, uint64_t data_size, FILE *ofile);
+uint32_t inflate_to_file(const unsigned char *data_start, uint64_t data_size, FILE *ofile, Error **e);
+uint32_t lzma_to_file(const unsigned char *data_start, uint64_t data_size, FILE *ofile, Error **e);
+uint32_t unstore_to_file(const unsigned char *data_start, uint64_t data_size, FILE *ofile, Error **e);
 
 /* Decompress from file source to file dest until stream ends or EOF.
    inf() returns Z_OK on success, Z_MEM_ERROR if memory could not be
@@ -70,7 +70,8 @@ uint32_t unstore_to_file(const unsigned char *data_start, uint64_t data_size, FI
    is an error reading or writing the files. */
 uint32_t inflate_to_file(const unsigned char *data_start,
                          uint64_t data_size,
-                         FILE *ofile) {
+                         FILE *ofile,
+                         Error **e) {
     uint32_t crcvalue = crc32(0, Z_NULL, 0);
     int ret;
     unsigned have;
@@ -85,8 +86,10 @@ uint32_t inflate_to_file(const unsigned char *data_start,
     strm.avail_in = 0;
     strm.next_in = Z_NULL;
     ret = inflateInit2(&strm, -15);
-    if (ret != Z_OK)
-        throw std::runtime_error("Could not init zlib.");
+    if (ret != Z_OK) {
+        *e = create_error("Could not init zlib.");
+        return 0;
+    }
     std::unique_ptr<z_stream, int (*)(z_stream_s*)> zcloser(&strm, inflateEnd);
 
     /* decompress until deflate stream ends or end of file */
@@ -107,33 +110,31 @@ uint32_t inflate_to_file(const unsigned char *data_start,
             case Z_NEED_DICT:
             case Z_DATA_ERROR:
             case Z_MEM_ERROR:
-                throw std::runtime_error(strm.msg);
+                *e = create_error(strm.msg);
+                return 0;
             }
             have = CHUNK - strm.avail_out;
             crcvalue = crc32(crcvalue, out.get(), have);
             if (fwrite(out.get(), 1, have, ofile) != have || ferror(ofile)) {
-                throw_system("Could not write to file:");
+                *e = create_system_error("Could not write to file:");
+                return 0;
             }
         } while (strm.avail_out == 0);
         /* done when inflate() says it's done */
     } while (ret != Z_STREAM_END);
-/*
-    if(Z_STREAM_END != Z_OK) {
-        throw std::runtime_error("Decompression failed.");
-    }
-*/
     return crcvalue;
 }
 
 #ifdef _WIN32
-uint32_t lzma_to_file(const unsigned char *data_start, uint64_t data_size, FILE *ofile) {
-    throw std::runtime_error("LZMA not supported on Windows.");
+uint32_t lzma_to_file(const unsigned char *data_start, uint64_t data_size, FILE *ofile, Error **e) {
+    *e = create_error("LZMA not supported on Windows.");
 }
 
 #else
 uint32_t lzma_to_file(const unsigned char *data_start,
                       uint64_t data_size,
-                      FILE *ofile) {
+                      FILE *ofile,
+                      Error **e) {
     uint32_t crcvalue = crc32(0, Z_NULL, 0);
     std::unique_ptr<unsigned char[]> out(new unsigned char [CHUNK]);
     lzma_stream strm = LZMA_STREAM_INIT;
@@ -148,12 +149,14 @@ uint32_t lzma_to_file(const unsigned char *data_start,
     lzma_ret ret = lzma_properties_decode(&filter[0], nullptr, data_start + offset, properties_size);
     offset += properties_size;
     if(ret != LZMA_OK) {
-        throw std::runtime_error("Could not decode LZMA properties.");
+        *e = create_error("Could not decode LZMA properties.");
+        return 0;
     }
     ret = lzma_raw_decoder(&strm, &filter[0]);
     free(filter[0].options);
     if(ret != LZMA_OK) {
-        throw std::runtime_error("Could not initialize LZMA decoder.");
+        *e = create_error("Could not initialize LZMA decoder.");
+        return 0;
     }
     std::unique_ptr<lzma_stream, void(*)(lzma_stream*)> lcloser(&strm, lzma_end);
 
@@ -170,12 +173,14 @@ uint32_t lzma_to_file(const unsigned char *data_start,
             strm.next_out = out.get();
             ret = lzma_code(&strm, LZMA_RUN);
             if(ret != LZMA_OK && ret != LZMA_STREAM_END) {
-                throw std::runtime_error("Decompression failed.");
+                *e = create_error("Decompression failed.");
+                return 0;
             }
             have = CHUNK - strm.avail_out;
             crcvalue = crc32(crcvalue, out.get(), have);
             if (fwrite(out.get(), 1, have, ofile) != have || ferror(ofile)) {
-                throw_system("Could not write to file:");
+                *e = create_error("Could not write to file:");
+                return 0;
             }
         } while (strm.avail_out == 0);
     } while (true);
@@ -185,19 +190,24 @@ uint32_t lzma_to_file(const unsigned char *data_start,
 
 uint32_t unstore_to_file(const unsigned char *data_start,
                          uint64_t data_size,
-                         FILE *ofile) {
+                         FILE *ofile,
+                         Error **e) {
     auto bytes_written = fwrite(data_start, 1, data_size, ofile);
     if(bytes_written != data_size) {
-        throw_system("Could not write file fully:");
+        *e = create_system_error("Could not write file fully:");
+        return 0;
     }
     return CRC32(data_start, data_size);
 }
 
-void create_symlink(const unsigned char *data_start, uint64_t data_size, const std::string &outname) {
+void create_symlink(const unsigned char *data_start, uint64_t data_size, const std::string &outname, Error **e) {
 #ifndef _WIN32
     std::string symlink_target(data_start, data_start + data_size);
+    printf("Symlinking.\n");
     if(symlink(symlink_target.c_str(), outname.c_str()) != 0) {
-        throw_system("Symlink creation failed:");
+        printf("Not work.\n");
+        *e = create_system_error("Symlink creation failed:");
+        return;
     }
 #endif
 }
@@ -206,7 +216,8 @@ void create_file(const localheader &lh,
                  const centralheader &ch,
                  const unsigned char *data_start,
                  uint64_t data_size,
-                 const std::string &outname) {
+                 const std::string &outname,
+                 Error **e) {
     decltype(unstore_to_file) *f;
     if(ch.compression_method == ZIP_NO_COMPRESSION) {
         f = unstore_to_file;
@@ -215,35 +226,45 @@ void create_file(const localheader &lh,
     } else if(ch.compression_method == ZIP_LZMA) {
         f = lzma_to_file;
     } else {
-        throw std::runtime_error("Unsupported compression format.");
+        *e = create_error("Unsupported compression format.");
+        return;
     }
     if(exists_on_fs(outname)) {
-        throw std::runtime_error("Already exists, will not overwrite.");
+        *e = create_error("Already exists, will not overwrite.");
+        return;
     }
-    create_dirs_for_file(outname);
+    create_dirs_for_file(outname, e);
+    if(*e) {
+        return;
+    }
     std::string extraction_name = outname + "$ZIPTMP";
-    File ofile(extraction_name.c_str(), "w+b");
+    File ofile;
+    ofile.initialize(extraction_name.c_str(), "w+b", e);
+    if(*e) {
+        return;
+    }
     uint32_t crc32;
-    try {
-        crc32 = (*f)(data_start, data_size, ofile.get());
-    } catch(...) {
+    crc32 = (*f)(data_start, data_size, ofile.get(), e);
+    if(*e) {
         unlink(extraction_name.c_str());
-        throw;
+        return;
     }
 
     uint32_t original = lh.gp_bitflag&(1<<2) ? ch.crc32 : lh.crc32;
     if(crc32 != original) {
         unlink(extraction_name.c_str());
-        throw std::runtime_error("CRC32 checksum is invalid.");
+        *e = create_error("CRC32 checksum is invalid.");
+        return;
     }
     ofile.close();
     if(rename(extraction_name.c_str(), outname.c_str()) != 0) {
         unlink(extraction_name.c_str());
-        throw_system("Could not rename tmp file to target file:");
+        *e = create_error("Could not rename tmp file to target file:");
+        return;
     }
 }
 
-void create_device(const localheader &lh, const std::string &outname) {
+void create_device(const localheader &lh, const std::string &outname, Error **e) {
 #ifdef _WIN32
   // Windows does not have character devices.
 #else
@@ -252,9 +273,13 @@ void create_device(const localheader &lh, const std::string &outname) {
         std::string msg("Incorrect extra data for character device, expected 8, got ");
         msg += std::to_string(d.size());
         msg += ".";
-        throw std::runtime_error(msg);
+        *e = create_error(msg.c_str());
+        return;
     }
-    create_dirs_for_file(outname);
+    create_dirs_for_file(outname, e);
+    if(*e) {
+        return;
+    }
     uint32_t major_id = le32toh(*reinterpret_cast<const uint32_t*>(&d[0]));
     uint32_t minor_id = le32toh(*reinterpret_cast<const uint32_t*>(&d[4]));
     if(mknod(outname.c_str(), S_IFCHR, makedev(major_id, minor_id)) != 0) {
@@ -263,12 +288,12 @@ void create_device(const localheader &lh, const std::string &outname) {
         msg += " minor ";
         msg += std::to_string(minor_id);
         msg += ": ";
-        throw_system(msg.c_str());
+        *e = create_system_error(msg.c_str());
     }
 #endif
 }
 
-filetype detect_filetype(const localheader &lh, const centralheader &ch) {
+filetype detect_filetype(const localheader &lh, const centralheader &ch, Error **e) {
 #ifndef _WIN32
     if(ch.version_made_by>>8 == MADE_BY_UNIX) {
         uint16_t extattrs = ch.external_file_attributes >> 16;
@@ -276,7 +301,7 @@ filetype detect_filetype(const localheader &lh, const centralheader &ch) {
             return DIRECTORY_ENTRY;
         } else if(S_ISLNK(extattrs)) {
             if(ch.compression_method != ZIP_NO_COMPRESSION) {
-                throw std::runtime_error("Symbolic link stored compressed. Not supported.");
+                *e = create_error("Symbolic link stored compressed. Not supported.");
             }
             return SYMLINK_ENTRY;
         } else if(S_ISCHR(extattrs)) {
@@ -299,24 +324,30 @@ filetype do_unpack(const localheader &lh,
                const centralheader &ch,
                const unsigned char *data_start,
                uint64_t data_size,
-               const std::string &outname) {
-    auto ftype = detect_filetype(lh, ch);
+               const std::string &outname,
+               Error **e) {
+    auto ftype = detect_filetype(lh, ch, e);
+    if(*e) {
+        return ftype;
+    }
     switch(ftype) {
-    case DIRECTORY_ENTRY : mkdirp(outname); break;
-    case SYMLINK_ENTRY : create_symlink(data_start, data_size, outname); break;
-    case CHARDEV_ENTRY : create_device(lh, outname); break;
-    case FILE_ENTRY : create_file(lh, ch, data_start, data_size, outname); break;
-    default : throw std::runtime_error("Unknown file type.");
+    case DIRECTORY_ENTRY : mkdirp(outname, e); break;
+    case SYMLINK_ENTRY : create_symlink(data_start, data_size, outname, e); break;
+    case CHARDEV_ENTRY : create_device(lh, outname, e); break;
+    case FILE_ENTRY : create_file(lh, ch, data_start, data_size, outname, e); break;
+    default : *e = create_error("Unknown file type.");
     }
     return ftype;
 }
 
-void set_unix_permissions(const localheader &lh, const centralheader &ch, const std::string &fname) {
+void set_unix_permissions(const localheader &lh, const centralheader &ch, const std::string &fname,
+        Error **e) {
 #ifndef _WIN32
     // This part of the zip spec is poorly documented. :(
     // https://trac.edgewall.org/attachment/ticket/8919/ZipDownload.patch
     if(chmod(fname.c_str(), (ch.external_file_attributes >> 16)&0777) != 0) {
-        throw_system("Could not change ownership: ");
+        *e = create_system_error("Could not change ownership: ");
+        return;
     }
     // Only support mtime if it is in zip64 info.
     // FIXME add support for crazy zip dos format.
@@ -337,26 +368,27 @@ void set_unix_permissions(const localheader &lh, const centralheader &ch, const 
 UnpackResult unpack_entry(const std::string &prefix, const localheader &lh,
         const centralheader &ch,
         const unsigned char *data_start,
-        uint64_t data_size) {
-    try {
-        std::string ofname;
-        if(prefix.empty()) {
-            ofname = lh.fname;
+        uint64_t data_size,
+        Error **e) {
+    std::string ofname;
+    if(prefix.empty()) {
+        ofname = lh.fname;
+    } else {
+        if(prefix.back() != '/') {
+            ofname = prefix + '/' + lh.fname;
         } else {
-            if(prefix.back() != '/') {
-                ofname = prefix + '/' + lh.fname;
-            } else {
-                ofname = prefix + lh.fname;
-            }
+            ofname = prefix + lh.fname;
         }
-        auto ftype = do_unpack(lh, ch, data_start, data_size, ofname);
-        if(ch.version_made_by>>8 == MADE_BY_UNIX && ftype != SYMLINK_ENTRY) {
-            set_unix_permissions(lh, ch, ofname);
-        }
-        return UnpackResult{true, "OK: " + lh.fname};
-    } catch(const std::exception &e) {
-        return UnpackResult{false, "FAIL: " + lh.fname + "\n" + e.what()};
-    } catch(...) {
     }
-    return UnpackResult{false, "FAIL: " + lh.fname + "  unknown error"};
+    auto ftype = do_unpack(lh, ch, data_start, data_size, ofname, e);
+    if(*e) {
+        return UnpackResult{false, "FAIL: " + lh.fname};
+    }
+    if(ch.version_made_by>>8 == MADE_BY_UNIX && ftype != SYMLINK_ENTRY) {
+        set_unix_permissions(lh, ch, ofname, e);
+        if(*e) {
+            return UnpackResult{false, "FAIL: " + lh.fname};
+        }
+    }
+    return UnpackResult{true, "OK: " + lh.fname};
 }

@@ -18,6 +18,7 @@
 #pragma once
 
 #include"ne_zipdefs.h"
+#include"ne_utils.h"
 #include<string>
 #include<vector>
 
@@ -30,10 +31,10 @@ bool exists_on_fs(const std::string &s);
 
 bool is_absolute_path(const std::string &fname);
 
-void mkdirp(const std::string &s);
-void create_dirs_for_file(const std::string &s);
+void mkdirp(const std::string &s, Error **e);
+void create_dirs_for_file(const std::string &s, Error **e);
 
-std::vector<fileinfo> expand_files(const std::vector<std::string> &originals);
+std::vector<fileinfo> expand_files(const std::vector<std::string> &originals, Error **e);
 
 #if defined _WIN32
 #if !defined S_ISDIR

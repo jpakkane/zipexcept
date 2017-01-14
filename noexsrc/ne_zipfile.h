@@ -19,6 +19,7 @@
 
 #include"ne_zipdefs.h"
 #include"ne_file.h"
+#include"ne_utils.h"
 #include<string>
 #include<vector>
 #include<thread>
@@ -26,12 +27,14 @@
 class ZipFile {
 
 public:
-    ZipFile(const char *fname);
+    ZipFile();
     ~ZipFile();
+
+    void initialize(const char *fname, Error **e);
 
     size_t size() const { return entries.size(); }
 
-    void unzip(const std::string &prefix) const;
+    void unzip(const std::string &prefix, Error **e) const;
 
     const std::vector<localheader> localheaders() const { return entries; }
 
@@ -39,8 +42,8 @@ private:
 
     void run(const std::string &prefix, int num_threads) const;
 
-    void readLocalFileHeaders();
-    void readCentralDirectory();
+    void readLocalFileHeaders(Error **e);
+    void readCentralDirectory(Error **e);
 
     File zipfile;
     std::vector<localheader> entries;

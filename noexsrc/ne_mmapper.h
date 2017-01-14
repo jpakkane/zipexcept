@@ -22,12 +22,13 @@
 #include<windows.h>
 #endif
 #include<cstdint>
-
+#include"ne_utils.h"
 class File;
 
 class MMapper final {
 public:
-    explicit MMapper(const File &file);
+    explicit MMapper();
+    void initialise(const File &f, Error **e);
     MMapper(const MMapper&) = delete;
     MMapper(MMapper && other);
     MMapper& operator=(const MMapper &) = delete;

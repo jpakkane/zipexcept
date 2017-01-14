@@ -18,6 +18,7 @@
 #pragma once
 
 #include"ne_zipdefs.h"
+#include"ne_utils.h"
 #include<string>
 
 class TaskControl;
@@ -31,4 +32,5 @@ UnpackResult unpack_entry(const std::string &prefix,
         const localheader &lh,
         const centralheader &ch,
         const unsigned char *data_start,
-        uint64_t data_size);
+        uint64_t data_size,
+        Error **e);

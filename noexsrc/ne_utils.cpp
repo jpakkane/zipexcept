@@ -36,14 +36,24 @@
 using std::min;
 #endif
 
-void throw_system(const char *msg) {
+Error* create_error(const char *msg) {
+    Error *e = new Error();
+    e->msg = msg;
+    return e;
+}
+
+void free_error(Error *e) {
+    delete e;
+}
+
+Error* create_system_error(const char *msg) {
     std::string error(msg);
     assert(errno != 0);
     if(error.back() != ' ') {
         error += ' ';
     }
     error += strerror(errno);
-    throw std::runtime_error(error);
+    return create_error(error.c_str());
 }
 
 uint32_t CRC32(const unsigned char *buf, uint64_t bufsize) {
@@ -55,7 +65,10 @@ uint32_t CRC32(const unsigned char *buf, uint64_t bufsize) {
     return crcvalue;
 }
 
-uint32_t CRC32(File &f) {
-    MMapper mmap = f.mmap();
-    return CRC32(mmap, mmap.size());
+uint32_t CRC32(File &f, Error **e) {
+    auto mmap = f.mmap(e);
+    if(*e) {
+        return 0;
+    }
+    return CRC32(*mmap.get(), mmap->size());
 }
