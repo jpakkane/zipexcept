@@ -11,9 +11,7 @@ else
   compr_deps = [zdep]
 endif
 
-if not meson.is_cross_build() or host_machine.system() != 'windows'
-  subdir('src') # Threads don't work on mingw but want to develop on Ubuntu for now.
-endif
-
-libinc = include_directories('src')
+utest_exe = find_program('unziptest.py')
+subdir('src')
+subdir('noexsrc')
 

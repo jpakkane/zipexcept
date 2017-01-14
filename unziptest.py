@@ -124,7 +124,7 @@ class TestUnzip(ZipTestBase):
 
 if __name__ == '__main__':
     datadir = os.path.join(sys.argv[1], 'testdata')
-    unzip_exe = os.path.join(sys.argv[2], 'parunzip')
+    unzip_exe = sys.argv[3]
     if not os.path.isabs(datadir):
         datadir = os.path.join(os.getcwd(), datadir)
     if not os.path.isabs(unzip_exe):
@@ -133,5 +133,5 @@ if __name__ == '__main__':
         unzip_exe += '.exe'
     assert(os.path.isdir(datadir))
     assert(os.path.isfile(unzip_exe))
-    sys.argv = sys.argv[0:1] + sys.argv[3:]
+    sys.argv = sys.argv[0:1] + sys.argv[4:]
     unittest.main()
