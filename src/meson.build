@@ -4,23 +4,21 @@ else
   linkargs = []
 endif
 
-zl = static_library('parzcore',
+zl = static_library('exccore',
   'zipfile.cpp',
   'decompress.cpp',
   'fileutils.cpp',
   'utils.cpp',
   'file.cpp',
   'mmapper.cpp',
-  'taskcontrol.cpp',
-  dependencies : compr_deps + [threaddep]
+  dependencies : compr_deps
 )
 
-executable('parunzip',
-  'parunzip.cpp',
+executable('exc-unzip',
+  'exc-unzip.cpp',
   link_with : zl,
   install : true,
   link_args : linkargs,
-  dependencies : threaddep,
 )
 
 utest_exe = find_program('unziptest.py')

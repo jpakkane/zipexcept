@@ -19,22 +19,9 @@
 
 #include"zipdefs.h"
 #include"file.h"
-#include"taskcontrol.h"
 #include<string>
 #include<vector>
 #include<thread>
-
-struct FileDisplayInfo {
-    std::string fname;
-    uint64_t compressed_size;
-    uint64_t uncompressed_size;
-};
-
-struct DirectoryDisplayInfo {
-    std::string dirname;
-    std::vector<DirectoryDisplayInfo> dirs;
-    std::vector<FileDisplayInfo> files;
-};
 
 class ZipFile {
 
@@ -44,11 +31,9 @@ public:
 
     size_t size() const { return entries.size(); }
 
-    TaskControl* unzip(const std::string &prefix, int num_threads) const;
+    void unzip(const std::string &prefix) const;
 
     const std::vector<localheader> localheaders() const { return entries; }
-
-    DirectoryDisplayInfo build_tree() const;
 
 private:
 
@@ -68,5 +53,4 @@ private:
     size_t fsize;
 
     mutable std::unique_ptr<std::thread> t;
-    mutable TaskControl tc;
 };

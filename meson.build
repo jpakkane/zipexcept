@@ -10,7 +10,6 @@ if host_machine.system() != 'windows'
 else
   compr_deps = [zdep]
 endif
-threaddep = dependency('threads')
 
 if not meson.is_cross_build() or host_machine.system() != 'windows'
   subdir('src') # Threads don't work on mingw but want to develop on Ubuntu for now.

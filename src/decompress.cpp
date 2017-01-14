@@ -28,7 +28,6 @@
 #include"utils.h"
 #include"fileutils.h"
 #include"file.h"
-#include"taskcontrol.h"
 
 #include"portable_endian.h"
 #include<zlib.h>
@@ -59,9 +58,9 @@
 
 namespace {
 
-uint32_t inflate_to_file(const unsigned char *data_start, uint64_t data_size, FILE *ofile, const TaskControl &tc);
-uint32_t lzma_to_file(const unsigned char *data_start, uint64_t data_size, FILE *ofile, const TaskControl &tc);
-uint32_t unstore_to_file(const unsigned char *data_start, uint64_t data_size, FILE *ofile, const TaskControl &tc);
+uint32_t inflate_to_file(const unsigned char *data_start, uint64_t data_size, FILE *ofile);
+uint32_t lzma_to_file(const unsigned char *data_start, uint64_t data_size, FILE *ofile);
+uint32_t unstore_to_file(const unsigned char *data_start, uint64_t data_size, FILE *ofile);
 
 /* Decompress from file source to file dest until stream ends or EOF.
    inf() returns Z_OK on success, Z_MEM_ERROR if memory could not be
@@ -71,8 +70,7 @@ uint32_t unstore_to_file(const unsigned char *data_start, uint64_t data_size, FI
    is an error reading or writing the files. */
 uint32_t inflate_to_file(const unsigned char *data_start,
                          uint64_t data_size,
-                         FILE *ofile,
-                         const TaskControl &tc) {
+                         FILE *ofile) {
     uint32_t crcvalue = crc32(0, Z_NULL, 0);
     int ret;
     unsigned have;
@@ -104,7 +102,6 @@ uint32_t inflate_to_file(const unsigned char *data_start,
             strm.avail_out = CHUNK;
             strm.next_out = out.get();
             ret = inflate(&strm, Z_NO_FLUSH);
-            tc.throw_if_stopped();
             assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
             switch (ret) {
             case Z_NEED_DICT:
@@ -136,8 +133,7 @@ uint32_t lzma_to_file(const unsigned char *data_start, uint64_t data_size, FILE 
 #else
 uint32_t lzma_to_file(const unsigned char *data_start,
                       uint64_t data_size,
-                      FILE *ofile,
-                      const TaskControl &tc) {
+                      FILE *ofile) {
     uint32_t crcvalue = crc32(0, Z_NULL, 0);
     std::unique_ptr<unsigned char[]> out(new unsigned char [CHUNK]);
     lzma_stream strm = LZMA_STREAM_INIT;
@@ -173,7 +169,6 @@ uint32_t lzma_to_file(const unsigned char *data_start,
             strm.avail_out = CHUNK;
             strm.next_out = out.get();
             ret = lzma_code(&strm, LZMA_RUN);
-            tc.throw_if_stopped();
             if(ret != LZMA_OK && ret != LZMA_STREAM_END) {
                 throw std::runtime_error("Decompression failed.");
             }
@@ -190,9 +185,7 @@ uint32_t lzma_to_file(const unsigned char *data_start,
 
 uint32_t unstore_to_file(const unsigned char *data_start,
                          uint64_t data_size,
-                         FILE *ofile,
-                         const TaskControl &tc) {
-    tc.throw_if_stopped();
+                         FILE *ofile) {
     auto bytes_written = fwrite(data_start, 1, data_size, ofile);
     if(bytes_written != data_size) {
         throw_system("Could not write file fully:");
@@ -213,8 +206,7 @@ void create_file(const localheader &lh,
                  const centralheader &ch,
                  const unsigned char *data_start,
                  uint64_t data_size,
-                 const std::string &outname,
-                 const TaskControl &tc) {
+                 const std::string &outname) {
     decltype(unstore_to_file) *f;
     if(ch.compression_method == ZIP_NO_COMPRESSION) {
         f = unstore_to_file;
@@ -233,7 +225,7 @@ void create_file(const localheader &lh,
     File ofile(extraction_name.c_str(), "w+b");
     uint32_t crc32;
     try {
-        crc32 = (*f)(data_start, data_size, ofile.get(), tc);
+        crc32 = (*f)(data_start, data_size, ofile.get());
     } catch(...) {
         unlink(extraction_name.c_str());
         throw;
@@ -307,14 +299,13 @@ filetype do_unpack(const localheader &lh,
                const centralheader &ch,
                const unsigned char *data_start,
                uint64_t data_size,
-               const std::string &outname,
-               const TaskControl &tc) {
+               const std::string &outname) {
     auto ftype = detect_filetype(lh, ch);
     switch(ftype) {
     case DIRECTORY_ENTRY : mkdirp(outname); break;
     case SYMLINK_ENTRY : create_symlink(data_start, data_size, outname); break;
     case CHARDEV_ENTRY : create_device(lh, outname); break;
-    case FILE_ENTRY : create_file(lh, ch, data_start, data_size, outname, tc); break;
+    case FILE_ENTRY : create_file(lh, ch, data_start, data_size, outname); break;
     default : throw std::runtime_error("Unknown file type.");
     }
     return ftype;
@@ -346,8 +337,7 @@ void set_unix_permissions(const localheader &lh, const centralheader &ch, const 
 UnpackResult unpack_entry(const std::string &prefix, const localheader &lh,
         const centralheader &ch,
         const unsigned char *data_start,
-        uint64_t data_size,
-        const TaskControl &tc) {
+        uint64_t data_size) {
     try {
         std::string ofname;
         if(prefix.empty()) {
@@ -359,7 +349,7 @@ UnpackResult unpack_entry(const std::string &prefix, const localheader &lh,
                 ofname = prefix + lh.fname;
             }
         }
-        auto ftype = do_unpack(lh, ch, data_start, data_size, ofname, tc);
+        auto ftype = do_unpack(lh, ch, data_start, data_size, ofname);
         if(ch.version_made_by>>8 == MADE_BY_UNIX && ftype != SYMLINK_ENTRY) {
             set_unix_permissions(lh, ch, ofname);
         }

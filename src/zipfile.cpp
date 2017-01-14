@@ -182,44 +182,6 @@ endrecord read_end_record(File &f) {
     return el;
 }
 
-void wait_for_slot(std::vector<std::future<UnpackResult>> &entries,
-                   const int num_threads,
-                   TaskControl &tc) {
-    if((int)entries.size() < num_threads)
-        return;
-    while(true) {
-        auto finished = std::find_if(entries.begin(), entries.end(), [](const std::future<UnpackResult> &e) {
-            return e.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready;
-        });
-        if(finished != entries.end()) {
-            auto r = finished->get();
-            if(r.success) {
-                tc.add_success(r.msg);
-            } else {
-                tc.add_failure(r.msg);
-            }
-            entries.erase(finished);
-            return;
-        }
-        if(tc.should_stop()) {
-            return;
-        }
-        std::this_thread::yield();
-    }
-}
-
-void order_entries(DirectoryDisplayInfo &d) {
-    std::sort(d.dirs.begin(), d.dirs.end(), [](const DirectoryDisplayInfo &d1, const DirectoryDisplayInfo &d2) {
-        return natural_less(d1.dirname, d2.dirname);
-    });
-    std::sort(d.files.begin(), d.files.end(), [](const FileDisplayInfo &f1, const FileDisplayInfo &f2) {
-        return natural_less(f1.fname, f2.fname);
-    });
-    for(auto &de : d.dirs) {
-        order_entries(de);
-    }
-}
-
 }
 
 ZipFile::ZipFile(const char *fname) : zipfile(fname, "rb") {
@@ -294,94 +256,22 @@ void ZipFile::readCentralDirectory() {
     }
 }
 
-TaskControl* ZipFile::unzip(const std::string &prefix, int num_threads) const {
-    if(num_threads < 0) {
-        num_threads = max((int)std::thread::hardware_concurrency(), 1);
-    }
-    if(tc.state() != TASK_NOT_STARTED) {
-        throw std::logic_error("Tried to start an already used packing process.");
-    }
+void ZipFile::unzip(const std::string &prefix) const {
     int fd = zipfile.fileno();
     if(fd < 0) {
         throw_system("Could not open zip file:");
     }
 
-    tc.reserve(entries.size());
-    tc.set_state(TASK_RUNNING);
-    t.reset(new std::thread([this](const std::string prefix, int num_threads) {
-        try {
-            this->run(prefix, num_threads);
-        } catch(const std::exception &e) {
-            printf("Fail: %s\n", e.what());
-        } catch(...) {
-            printf("Unknown fail.\n");
-        }
-    }, prefix, num_threads));
-    return &tc;
-}
-
-void ZipFile::run(const std::string &prefix, int num_threads) const {
     MMapper map(zipfile);
 
     unsigned char *file_start = map;
-    std::vector<std::future<UnpackResult>> futures;
-    futures.reserve(num_threads);
     for(size_t i=0; i<entries.size(); i++) {
-        wait_for_slot(futures, num_threads, tc);
-        if(tc.should_stop()) {
-            break;
-        }
-        auto unstoretask = [this, file_start, i, &prefix](){
-            return unpack_entry(prefix, entries[i],
-                                centrals[i],
-                                file_start + data_offsets[i],
-                                entries[i].compressed_size,
-                                tc);
-        };
-        futures.emplace_back(std::async(std::launch::async, unstoretask));
+        auto r = unpack_entry(prefix, entries[i],
+                centrals[i],
+                file_start + data_offsets[i],
+                entries[i].compressed_size);
+        printf("%s\n", r.msg.c_str());
     }
-    for(auto &f : futures) {
-        auto r = f.get();
-        if(r.success) {
-            tc.add_success(r.msg);
-        } else {
-            tc.add_failure(r.msg);
-        }
-    }
-    tc.set_state(TASK_FINISHED);
 }
 
-
-DirectoryDisplayInfo ZipFile::build_tree() const {
-    DirectoryDisplayInfo root;
-    for(const auto &e : entries) {
-        DirectoryDisplayInfo *current = &root;
-        std::string fname = e.fname;
-        auto index = fname.find('/');
-        while(index != std::string::npos) {
-            std::string dirpart = fname.substr(0, index);
-            fname = fname.substr(index+1);
-            auto dir = std::find_if(current->dirs.begin(), current->dirs.end(),
-                    [&dirpart] (const DirectoryDisplayInfo &d) {return dirpart == d.dirname;});
-            if(dir != current->dirs.end()) {
-                current = &(*dir);
-            } else {
-                DirectoryDisplayInfo tmp;
-                tmp.dirname = dirpart;
-                current->dirs.emplace_back(std::move(tmp));
-                current = &current->dirs.back();
-            }
-            index = fname.find('/');
-        }
-        if(fname.empty()) {
-            // Zip files mark directory entries by ending them with a slash,
-            // don't create a file entry.
-            continue;
-        }
-        FileDisplayInfo tmp{fname, e.compressed_size, e.uncompressed_size};
-        current->files.emplace_back(std::move(tmp));
-    }
-    order_entries(root);
-    return root;
-}
 
