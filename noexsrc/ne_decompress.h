@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include"zipdefs.h"
+#include"ne_zipdefs.h"
 #include<string>
 
 class TaskControl;

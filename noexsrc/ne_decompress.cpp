@@ -22,14 +22,14 @@
  *  Not copyrighted -- provided to the public domain
  *  Version 1.4  11 December 2005  Mark Adler */
 
-#include "decompress.h"
+#include "ne_decompress.h"
 
-#include"zipdefs.h"
-#include"utils.h"
-#include"fileutils.h"
-#include"file.h"
+#include"ne_zipdefs.h"
+#include"ne_utils.h"
+#include"ne_fileutils.h"
+#include"ne_file.h"
 
-#include"portable_endian.h"
+#include"ne_portable_endian.h"
 #include<zlib.h>
 
 #ifdef _WIN32

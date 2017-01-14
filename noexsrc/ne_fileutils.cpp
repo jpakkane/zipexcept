@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include"fileutils.h"
-#include"utils.h"
+#include"ne_fileutils.h"
+#include"ne_utils.h"
 
 #ifdef _WIN32
 #include<WinSock2.h>

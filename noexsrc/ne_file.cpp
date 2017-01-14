@@ -15,10 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include"file.h"
-#include"utils.h"
-#include"mmapper.h"
-#include<portable_endian.h>
+#include"ne_file.h"
+#include"ne_utils.h"
+#include"ne_mmapper.h"
+#include<ne_portable_endian.h>
 #include<sys/stat.h>
 
 File::File(const std::string &fname, const char *mode) {

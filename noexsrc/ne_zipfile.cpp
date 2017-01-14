@@ -15,12 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include"zipfile.h"
-#include"utils.h"
-#include"fileutils.h"
-#include"mmapper.h"
-#include"naturalorder.h"
-#include<portable_endian.h>
+#include"ne_zipfile.h"
+#include"ne_utils.h"
+#include"ne_fileutils.h"
+#include"ne_mmapper.h"
+#include"ne_naturalorder.h"
+#include<ne_portable_endian.h>
 #ifdef _WIN32
 #include<winsock2.h>
 #include<windows.h>
@@ -34,9 +34,8 @@
 #include<cstring>
 #include<stdexcept>
 #include<future>
-#include<thread>
 #include<algorithm>
-#include "decompress.h"
+#include"ne_decompress.h"
 
 #ifndef _WIN32
 using std::max;

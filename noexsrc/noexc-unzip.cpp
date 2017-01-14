@@ -23,7 +23,7 @@
 #include<Windows.h>
 #endif
 
-#include"zipfile.h"
+#include"ne_zipfile.h"
 
 int main(int argc, char **argv) {
     if(argc != 2 ) {

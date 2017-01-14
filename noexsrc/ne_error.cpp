@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include<error.h>
+#include<ne_error.h>
 
 Error* create_error(const char *msg) {
     Error *e = new Error();

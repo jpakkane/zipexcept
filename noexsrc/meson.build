@@ -7,13 +7,13 @@ endif
 cpp_args = [] # '-fno-exceptions']
 
 zl = static_library('noexccore',
-  'zipfile.cpp',
-  'decompress.cpp',
-  'fileutils.cpp',
-  'utils.cpp',
-  'file.cpp',
-  'mmapper.cpp',
-  'error.cpp',
+  'ne_zipfile.cpp',
+  'ne_decompress.cpp',
+  'ne_fileutils.cpp',
+  'ne_utils.cpp',
+  'ne_file.cpp',
+  'ne_mmapper.cpp',
+  'ne_error.cpp',
   cpp_args : cpp_args,
   dependencies : compr_deps
 )

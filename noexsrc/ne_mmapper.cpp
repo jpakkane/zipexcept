@@ -24,9 +24,9 @@
 #include<fcntl.h>
 #endif
 
-#include"mmapper.h"
-#include"file.h"
-#include"utils.h"
+#include"ne_mmapper.h"
+#include"ne_file.h"
+#include"ne_utils.h"
 
 #if defined(_WIN32)
 MMapper::MMapper(const File &f) {

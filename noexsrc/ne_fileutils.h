@@ -17,40 +17,32 @@
 
 #pragma once
 
-#include"zipdefs.h"
-#include"file.h"
+#include"ne_zipdefs.h"
 #include<string>
 #include<vector>
-#include<thread>
 
-class ZipFile {
+bool is_dir(const std::string &s);
+bool is_dir(const fileinfo &f);
+bool is_symlink(const fileinfo &f);
+bool is_file(const std::string &s);
+bool is_file(const fileinfo &f);
+bool exists_on_fs(const std::string &s);
 
-public:
-    ZipFile(const char *fname);
-    ~ZipFile();
+bool is_absolute_path(const std::string &fname);
 
-    size_t size() const { return entries.size(); }
+void mkdirp(const std::string &s);
+void create_dirs_for_file(const std::string &s);
 
-    void unzip(const std::string &prefix) const;
+std::vector<fileinfo> expand_files(const std::vector<std::string> &originals);
 
-    const std::vector<localheader> localheaders() const { return entries; }
-
-private:
-
-    void run(const std::string &prefix, int num_threads) const;
-
-    void readLocalFileHeaders();
-    void readCentralDirectory();
-
-    File zipfile;
-    std::vector<localheader> entries;
-    std::vector<centralheader> centrals;
-    std::vector<long> data_offsets;
-
-    zip64endrecord z64end;
-    zip64locator z64loc;
-    endrecord endloc;
-    size_t fsize;
-
-    mutable std::unique_ptr<std::thread> t;
-};
+#if defined _WIN32
+#if !defined S_ISDIR
+#define S_ISDIR(m) (((m) & _S_IFDIR) == _S_IFDIR)
+#endif
+#if !defined S_ISREG
+#define S_ISREG(m) (((m) & _S_IFREG) == _S_IFREG)
+#endif
+#if !defined S_ISLNK
+#define S_ISLNK(m) (false)
+#endif
+#endif
