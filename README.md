@@ -1,31 +1,14 @@
-# parzip
+# Testing behavior of code written with exceptions and error objects
 
-A command line utility to pack and unpack zip archives using multiple threads.
+This is a simple Zip file unpacker originally from [Parzip](https://github.com/jpakkane/parzip). It originally used exceptions for all error flow but it was then converted into using only GLib style error objects. This gives us a real world code base which is useful for testing purposes.
 
-Check out performance benchmarks on
-[decompression](http://nibblestew.blogspot.com/2016/05/jzip-parallel-unzipper-performance.html)
-and
-[compression](http://nibblestew.blogspot.com/2016/05/performance-testing-new-parallel-zip.html).
+## Compiling
 
-Licensed under GPLv3 or later.
+    meson <build dir>
+    ninja
 
-## Supports
+The error code version can be built with or without `-fno-exceptions`. To enable the switch invoke this command in the build dir:
 
- - both zipping and unzipping
- - multithreading
- - uncompressed (i.e. stored) files
- - [deflate](http:zlib.net) and [lzma](http://7-zip.org/sdk.html) compression and decompression
- - ZIP64 extensions (i.e. >4 GB files)
- - unix file attributes
+    mesonconf -Dnoexcept=true
 
-## Does not support
-
- - modifying existing archives
- - encryption (zip encryption is broken, use GPG instead)
- - ancient compression methods
- - archives split to multiple files
- - VMS, Amiga or any other non-modern platform
-
-## Contributions
-
-Please send patches as merge requests via the [Github project](https://github.com/jpakkane/jzip).
+How to disable it is left as an exercise to the reader. :)

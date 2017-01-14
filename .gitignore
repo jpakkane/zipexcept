@@ -1,6 +1,7 @@
 /build
 /buildopt
 /buildcross
+/buildclang
 .settings
 .project
 .cproject
