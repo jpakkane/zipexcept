@@ -1,0 +1,2 @@
+option('noexcept', type : 'boolean', value : false, description : 'Build error code version with -fno-exceptions.')
+

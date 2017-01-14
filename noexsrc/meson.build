@@ -4,7 +4,11 @@ else
   linkargs = []
 endif
 
-cpp_args = [] # '-fno-exceptions']
+if get_option('noexcept')
+  cpp_args = ['-fno-exceptions']
+else
+  cpp_args= []
+endif
 
 zl = static_library('noexccore',
   'ne_zipfile.cpp',
