@@ -20,3 +20,7 @@ How to disable it is left as an exercise to the reader. :)
 Every function that may fail takes an argument of type `Error **` which must point to an `Error *` with the value `nullptr`. The caller must then check the error value and if it is no longer `nullptr`, then an error has occurred and the caller must behave appropriately. Almost always this means aborting current work, releasing all resources and passing the error up the call chain.
 
 This allows the error handler to return dynamic error messages and to be naturally thread safe. This is not possible with C APIs modeled after `errno` and `strerror`. 
+
+## Measurements
+
+[Are here](http://nibblestew.blogspot.com/2017/01/testing-exception-vs-error-code.html)
