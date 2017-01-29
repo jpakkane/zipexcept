@@ -21,14 +21,14 @@
 #include<string>
 #include<vector>
 
-bool is_dir(const std::string &s);
-bool is_dir(const fileinfo &f);
-bool is_symlink(const fileinfo &f);
-bool is_file(const std::string &s);
-bool is_file(const fileinfo &f);
-bool exists_on_fs(const std::string &s);
+bool is_dir(const std::string &s) noexcept;
+bool is_dir(const fileinfo &f) noexcept;
+bool is_symlink(const fileinfo &f) noexcept;
+bool is_file(const std::string &s) noexcept;
+bool is_file(const fileinfo &f) noexcept;
+bool exists_on_fs(const std::string &s) noexcept;
 
-bool is_absolute_path(const std::string &fname);
+bool is_absolute_path(const std::string &fname) noexcept;
 
 void mkdirp(const std::string &s);
 void create_dirs_for_file(const std::string &s);

@@ -34,9 +34,9 @@ public:
     MMapper& operator=(MMapper &&other);
     ~MMapper();
 
-    uint64_t size() const { return map_size; }
+    uint64_t size() const noexcept { return map_size; }
 
-    operator unsigned char*() { return reinterpret_cast<unsigned char*>(addr); }
+    operator unsigned char*() noexcept { return reinterpret_cast<unsigned char*>(addr); }
 
 private:
     void *addr;

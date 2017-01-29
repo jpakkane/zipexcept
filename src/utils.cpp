@@ -46,7 +46,7 @@ void throw_system(const char *msg) {
     throw std::runtime_error(error);
 }
 
-uint32_t CRC32(const unsigned char *buf, uint64_t bufsize) {
+uint32_t CRC32(const unsigned char *buf, uint64_t bufsize) noexcept {
     uint32_t crcvalue = crc32(0, Z_NULL, 0);
     const uint64_t blocksize = 1024*1024;
     for(uint64_t offset=0; offset < bufsize; offset+=blocksize) {

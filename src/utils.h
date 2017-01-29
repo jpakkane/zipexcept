@@ -25,5 +25,5 @@
 
 void throw_system(const char *msg);
 
-uint32_t CRC32(const unsigned char *buf, uint64_t bufsize);
+uint32_t CRC32(const unsigned char *buf, uint64_t bufsize) noexcept;
 uint32_t CRC32(File &f);

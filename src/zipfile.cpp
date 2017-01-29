@@ -62,7 +62,7 @@ void unpack_zip64_sizes(const std::string &extra_field, uint64_t &compressed_siz
     throw std::runtime_error("Entry extra field did not contain ZIP64 extension, file can not be parsed.");
 }
 
-void unpack_unix(const std::string &extra, unixextra &unix) {
+void unpack_unix(const std::string &extra, unixextra &unix) noexcept {
     size_t offset = 0;
     while(offset < extra.size()) {
         uint16_t header_id = le16toh(*reinterpret_cast<const uint16_t*>(&extra[offset]));

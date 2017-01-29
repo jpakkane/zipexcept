@@ -141,7 +141,7 @@ std::vector<fileinfo> expand_entry(const std::string &fname) {
 
 }
 
-bool is_dir(const std::string &s) {
+bool is_dir(const std::string &s) noexcept {
     struct stat sbuf;
     if(stat(s.c_str(), &sbuf) < 0) {
         return false;
@@ -149,11 +149,11 @@ bool is_dir(const std::string &s) {
     return (sbuf.st_mode & S_IFMT) == S_IFDIR;
 }
 
-bool is_dir(const fileinfo &f) {
+bool is_dir(const fileinfo &f) noexcept {
     return S_ISDIR(f.mode);
 }
 
-bool is_file(const std::string &s) {
+bool is_file(const std::string &s) noexcept {
     struct stat sbuf;
     if(stat(s.c_str(), &sbuf) < 0) {
         return false;
@@ -161,15 +161,15 @@ bool is_file(const std::string &s) {
     return (sbuf.st_mode & S_IFMT) == S_IFREG;
 }
 
-bool is_file(const fileinfo &f) {
+bool is_file(const fileinfo &f) noexcept {
     return S_ISREG(f.mode);
 }
 
-bool is_symlink(const fileinfo &f) {
+bool is_symlink(const fileinfo &f) noexcept {
     return S_ISLNK(f.mode);
 }
 
-bool exists_on_fs(const std::string &s) {
+bool exists_on_fs(const std::string &s) noexcept {
     struct stat sbuf;
     return stat(s.c_str(), &sbuf) == 0;
 }
@@ -211,7 +211,7 @@ void create_dirs_for_file(const std::string &s) {
     mkdirp(s.substr(0, lastslash));
 }
 
-bool is_absolute_path(const std::string &fname) {
+bool is_absolute_path(const std::string &fname) noexcept {
     if(fname.empty()) {
         return false;
     }

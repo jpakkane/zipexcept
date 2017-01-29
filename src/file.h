@@ -37,20 +37,20 @@ public:
     ~File();
 
     File(const std::string &fname, const char *mode);
-    File(FILE *opened);
+    File(FILE *opened) noexcept ;
 
-    operator FILE*() { return f; }
+    operator FILE*() noexcept { return f; }
 
-    FILE* get() const { return f; }
-    int64_t tell() const;
-    int seek(int64_t offset, int whence=SEEK_SET);
+    FILE* get() const noexcept { return f; }
+    int64_t tell() const noexcept;
+    int seek(int64_t offset, int whence=SEEK_SET) noexcept;
     int fileno() const;
 
     MMapper mmap() const;
 
     uint64_t size() const;
     void flush();
-    void close();
+    void close() noexcept;
 
     uint8_t read8();
     uint16_t read16le();

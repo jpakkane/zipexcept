@@ -32,7 +32,7 @@ File::File(const std::string &fname, const char *mode) {
 
 }
 
-File::File(FILE *opened) : f(opened) {
+File::File(FILE *opened) noexcept : f(opened){
 }
 
 File::~File() {
@@ -41,21 +41,21 @@ File::~File() {
     }
 }
 
-void File::close() {
+void File::close() noexcept {
     if (f) {
         fclose(f);
         f = nullptr;
     }
 }
 
-int64_t File::tell() const {
+int64_t File::tell() const noexcept {
 #ifdef _WIN32
     return _ftelli64(f);
 #else
     return ftell(f);
 #endif
 }
-int File::seek(int64_t offset, int whence) {
+int File::seek(int64_t offset, int whence) noexcept {
 #ifdef _WIN32
     return _fseeki64(f, offset, whence);
 #else

@@ -29,15 +29,15 @@ public:
     ZipFile(const char *fname);
     ~ZipFile();
 
-    size_t size() const { return entries.size(); }
+    size_t size() const noexcept { return entries.size(); }
 
     void unzip(const std::string &prefix) const;
 
-    const std::vector<localheader> localheaders() const { return entries; }
+    const std::vector<localheader> localheaders() const noexcept { return entries; }
 
 private:
 
-    void run(const std::string &prefix, int num_threads) const;
+    void run(const std::string &prefix, int num_threads) const noexcept;
 
     void readLocalFileHeaders();
     void readCentralDirectory();

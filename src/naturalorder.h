@@ -27,7 +27,7 @@ struct try_result {
 };
 
 template<class T>
-try_result tryint(T &b, T&e) {
+try_result tryint(T &b, T&e) noexcept {
     try_result r;
     r.was_num = false;
     r.value = 0;
@@ -54,7 +54,7 @@ try_result tryint(T &b, T&e) {
  */
 
 template<class T>
-int natural_compare(T str1_begin, T str1_end, T str2_begin, T str2_end) {
+int natural_compare(T str1_begin, T str1_end, T str2_begin, T str2_end) noexcept {
     while(true) {
         auto end1 = str1_begin == str1_end;
         auto end2 = str2_begin == str2_end;
@@ -102,7 +102,7 @@ int natural_compare(T str1_begin, T str1_end, T str2_begin, T str2_end) {
  * Overload for types that have .begin() and .end().
  */
 template<class T1, class T2>
-int natural_compare(T1 &str1, T2 &str2) {
+int natural_compare(T1 &str1, T2 &str2) noexcept {
     return natural_compare(str1.begin(), str1.end(), str2.begin(), str2.end());
 }
 
@@ -110,6 +110,6 @@ int natural_compare(T1 &str1, T2 &str2) {
  * Comparator for use in std::sort.
  */
 template<class T>
-int natural_less(T &s1, T &s2) {
+int natural_less(T &s1, T &s2)  noexcept {
     return natural_compare(s1, s2) < 0;
 }
