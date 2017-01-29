@@ -48,24 +48,30 @@ class Measurer:
         errcodestat = os.stat(self.errcode_bin)
         return (estat.st_size, errcodestat.st_size)
 
+    def measure_one(self, env):
+        self.conf_and_build(env)
+        ex_size, errcode_size = self.sizes()
+        self.conf_and_build(env, ['-Dnoexcept=true'])
+        _, ecode_noexcept_size = self.sizes()
+        return ex_size, errcode_size, ecode_noexcept_size
+
     def measure(self):
         env = os.environ.copy()
         env['CXX'] = 'g++'
-        self.conf_and_build(env)
-        gcc_ex_size, gcc_errcode_size = self.sizes()
-        self.conf_and_build(env, ['-Dnoexcept=true'])
-        _, gcc_ecode_noexcept_size = self.sizes()
+        gcc_ex_size, gcc_errcode_size, gcc_ecode_noexcept_size = self.measure_one(env)
         env['CXX'] = 'clang++'
-        self.conf_and_build(env)
-        clang_ex_size, clang_errcode_size = self.sizes()
-        self.conf_and_build(env, ['-Dnoexcept=true'])
-        _, clang_ecode_noexcept_size = self.sizes()
+        clang_ex_size, clang_errcode_size, clang_ecode_noexcept_size = self.measure_one(env)
+        env['CXX'] = '/mnt/data/llvm/build/bin/clang++'
+        clang_trunk_ex_size, clang_trunk_errcode_size, clang_trunk_ecode_noexcept_size = self.measure_one(env)
         print('GCC exception size:', gcc_ex_size)
         print('GCC errorcode size:', gcc_errcode_size)
         print('GCC errorcode,noexcept size:', gcc_ecode_noexcept_size)
         print('Clang exception size:', clang_ex_size)
         print('Clang errorcode size:', clang_errcode_size)
         print('Clang errorcode,noexcept size:', clang_ecode_noexcept_size)
+        print('Clang trunk exception size:', clang_trunk_ex_size)
+        print('Clang trunk errorcode size:', clang_trunk_errcode_size)
+        print('Clang trunk errorcode,noexcept size:', clang_trunk_ecode_noexcept_size)
 
 if __name__ == '__main__':
     m = Measurer()
